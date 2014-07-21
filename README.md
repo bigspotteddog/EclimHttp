@@ -2,6 +2,11 @@
 
 An HTTP wrapper over eclim.
 
+## Prequisites
+
+1. Eclipse
+2. Eclim
+
 ## Build
 
     $ ant build-executable-jars
