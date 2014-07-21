@@ -54,9 +54,9 @@
     <property name="java.build.classes" value="${build.home}/staging/classes"/>
     <property name="java.build.testclasses" value="${build.home}/staging/testclasses"/>
 
-    <taskdef name="ant-fix-jar" classname="com.paltronics.ant.JarTimestamp">
+    <!-- <taskdef name="ant-fix-jar" classname="com.paltronics.ant.JarTimestamp">
         <classpath location="lib/build/ant-jar-fix.jar"/>
-    </taskdef>
+    </taskdef> -->
 
     <path id="buildtools.classpath">
         <fileset dir="${basedir}/lib/build" includes="*.jar"/>
@@ -101,7 +101,7 @@
                     <attribute name="Implementation-Vendor-Id" value="com.nobodyelses"/>
                 </manifest>
             </jar>
-            <ant-fix-jar jarfile="${java.build.lib}/@{module}.jar"/>
+            <!-- <ant-fix-jar jarfile="${java.build.lib}/@{module}.jar"/> -->
 
             <mkdir dir="${java.module.testclasses}"/>
             <javac srcdir="@{module}/src/test/java"
