@@ -1,0 +1,47 @@
+<html>
+<head>
+<title>Problems</title>
+<style>
+body {
+    background-color: #161819;
+    color: #aaaaaa;
+}
+td, th {
+    font-family: Inconsolata, Monaco, Consolas, 'Courier New', Courier;
+    text-align: left;
+    white-space: nowrap;
+}
+.true {
+    color: #aaaaaa;
+}
+.false {
+    color: #BF3030;
+}
+.text-right {
+    text-align: right;
+}
+</style>
+</head>
+<body>
+    <table>
+        <tr>
+            <th>Message</th>
+            <th>Path</th>
+            <th class="text-right">Line</th>
+            <th class="text-right">Pos</th>
+        </tr>
+        {{#problems}}
+        <tr class="{{warning}}">
+            <td>{{message}}</td>
+            <td>{{filename}}</td>
+            <td class="text-right">{{line}}</td>
+            <td class="text-right">{{column}}</td>
+        </tr>
+        {{/problems}}
+    </table>
+    <script>
+        window.location.reload(true);
+        //window.location.href = "/data/problems/-p/{{project}}?k={{key}}";
+    </script>
+</body>
+</html>

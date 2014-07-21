@@ -1,0 +1,104 @@
+Available Commands:
+    ant_complete -p project -f file -o offset -e encoding
+    ant_targets -p project -f file
+    ant_validate -p project -f file
+    archive_read -f file
+    history_add -p project -f file
+    history_clear -p project -f file
+    history_list -p project -f file
+    history_revision -p project -f file -r revision
+    java -p project [-d] [-c classname] [-w workingdir]
+         [-v vmargs] [-s sysprops] [-e envargs] [-a args]
+    java_bean_properties -p project -f file -o offset -e encoding
+                         -r properties -t type [-i]
+    java_callhierarchy -p project -f file -o offset -l length
+                       -e encoding [-c]
+    java_checkstyle -p project -f file
+    java_class_prototype -c classname [-p project] [-f file]
+    java_classpath -p project [-d delimiter]
+    java_classpath_variable_create -n name -p path
+    java_classpath_variable_delete -n name
+    java_classpath_variables
+    java_complete -p project -f file -o offset -e encoding
+                  -l layout
+    java_complete_package -p project [-n name]
+    java_constructor -p project -f file -o offset [-e encoding]
+                     [-r properties] [-s]
+    java_correct -p project -f file -l line -o offset
+                 [-e encoding] [-a apply]
+    java_delegate -p project -f file [-o offset] [-e encoding]
+                  [-v variable] [-s superType] [-m methods]
+    java_docsearch -n project [-f file] [-o offset] [-e encoding]
+                   [-l length] [-p pattern] [-t type] [-x context]
+                   [-s scope]
+    java_element_doc [-p project] [-f file] [-o offset] [-l length]
+                     [-e encoding] [-u url]
+    java_format -p project -f file -h hoffset -t toffset
+                -e encoding
+    java_hierarchy -p project -f file -o offset -e encoding
+    java_impl -p project -f file [-o offset] [-e encoding]
+              [-t type] [-s superType] [-m methods]
+    java_import -p project -f file -o offset -e encoding
+                [-t type]
+    java_import_organize -p project -f file -o offset -e encoding
+                         [-t types]
+    java_junit -p project [-d] [-h] [-t test]
+               [-f file] [-o offset] [-e encoding]
+    java_junit_find_test -p project -f file -o offset -e encoding
+    java_junit_impl -p project -f file [-o offset] [-e encoding]
+                    [-t type] [-s superType] [-m methods]
+    java_junit_tests -p project
+    java_list_installs
+    java_refactor_move -p project -f file -n name [-v]
+                       [-d diff]
+    java_refactor_rename -p project -f file -n name -o offset
+                         -l length -e encoding [-v] [-d diff]
+    java_search [-n project] [-f file] [-o offset] [-e encoding]
+                [-l length] [-p pattern] [-t type] [-x context]
+                [-s scope] [-i]
+    java_src_dirs -p project
+    java_src_exists -f file [-p project]
+    java_src_find -c classname [-p project]
+    java_src_update -p project -f file [-v] [-b]
+    javadoc -p project [-f file] [-d]
+    javadoc_comment -p project -f file -o offset [-e encoding]
+    jobs [-f family]
+    locate_file -p pattern -s scope [-n project] [-f file]
+                [-i]
+    log4j_validate -p project -f file
+    ping
+    problems -p project [-e]
+    project_build -p project
+    project_by_resource -f file
+    project_close -p project
+    project_create -f folder [-p name] -n natures [-d depends]
+                   [-a args]
+    project_delete -p project
+    project_import -f folder
+    project_info -p project
+    project_link_resource -f file
+    project_list [-n nature]
+    project_move -p project -d dir
+    project_nature_add -p project -n nature [-a args]
+    project_nature_aliases [-m]
+    project_nature_remove -p project -n nature
+    project_natures [-p project]
+    project_open -p project
+    project_refresh -p project
+    project_refresh_file -p project -f file
+    project_rename -p project -n name
+    project_setting -p project -s setting [-v value]
+    project_settings [-p project]
+    project_update -p project [-b buildfile] [-s settings]
+    projects
+    refactor_redo [-p]
+    refactor_undo [-p]
+    reload
+    setting -s setting
+    settings
+    settings_update [-s settings]
+    shutdown
+    webxml_validate -p project -f file
+    workspace_dir
+    xml_format -f file -w linewidth -i indent -m fileformat
+    xml_validate -p project -f file [-s]

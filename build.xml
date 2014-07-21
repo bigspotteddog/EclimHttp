@@ -1,0 +1,700 @@
+<?xml version="1.0"?>
+<project name="eclim-command" default="build" basedir=".">
+
+    <property environment="env"/>
+    <property name="env.BUILD_NUMBER" value="UNSTABLE"/>
+    <property name="build.number" value=".${env.BUILD_NUMBER}"/>
+    <property name="app.major" value="1.0"/>
+    <property name="app.minor" value="0"/>
+    <property name="app.version" value="${app.major}.${app.minor}${build.number}"/>
+    <echo message="Building ${ant.project.name} version ${app.version}"/>
+
+    <property name="build.home" value="${basedir}/build"/>
+    <property name="artifacts.home" value="${build.home}/artifacts"/>
+    <property name="lib.dir" value="${basedir}/lib"/>
+    <property name="package.name" value="${ant.project.name}"/>
+
+    <property name="user.properties" value="${basedir}/local.properties"/>
+
+    <!-- ant-contrib adds 'if' task, very useful in macros. -->
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="${basedir}/lib/build/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+
+    <path id="cobertura.classpath">
+        <fileset dir="${lib.dir}/build">
+            <include name="cobertura.jar"/>
+            <include name="asm-3.0.jar"/>
+            <include name="asm-tree-3.0.jar"/>
+            <include name="jakarta-oro-2.0.8.jar"/>
+        </fileset>
+        <fileset dir="${lib.dir}/build">
+            <include name="log4j-1.2.15.jar"/>
+        </fileset>
+    </path>
+
+    <taskdef classpathref="cobertura.classpath" resource="tasks.properties"/>
+
+    <path id="java.lib.build">
+        <fileset dir="${basedir}" includes="lib/build/*.jar"/>
+    </path>
+    <path id="java.lib.compile">
+        <fileset dir="${basedir}" includes="lib/compile/*.jar"/>
+    </path>
+    <path id="java.lib.runtime">
+        <fileset dir="${basedir}" includes="lib/runtime/*.jar"/>
+    </path>
+    <path id="java.lib.test">
+        <fileset dir="${basedir}" includes="lib/test/*.jar"/>
+    </path>
+
+    <property name="java.build.lib" value="${build.home}/staging/lib"/>
+    <property name="java.build.classes" value="${build.home}/staging/classes"/>
+    <property name="java.build.testclasses" value="${build.home}/staging/testclasses"/>
+
+    <taskdef name="ant-fix-jar" classname="com.paltronics.ant.JarTimestamp">
+        <classpath location="lib/build/ant-jar-fix.jar"/>
+    </taskdef>
+
+    <path id="buildtools.classpath">
+        <fileset dir="${basedir}/lib/build" includes="*.jar"/>
+    </path>
+
+    <taskdef resource="net/sf/antcontrib/antlib.xml" classpathref="buildtools.classpath"/>
+
+    <macrodef name="build-jar">
+        <attribute name="module"/>
+        <attribute name="classpath-refid"/>
+        <attribute name="version"/>
+        <sequential>
+            <local name="java.module.classes"/>
+            <property name="java.module.classes" value="${java.build.classes}/@{module}"/>
+
+            <local name="java.module.testclasses"/>
+            <property name="java.module.testclasses" value="${java.build.testclasses}/@{module}"/>
+
+            <mkdir dir="${java.module.classes}"/>
+            <javac srcdir="@{module}/src/main/java"
+                   destdir="${java.module.classes}"
+                   optimize="false"
+                   deprecation="false"
+                   debug="true"
+                   source="@{version}"
+                   target="@{version}"
+                   includeantruntime="false"
+                    >
+                <!--suppress AntResolveInspection -->
+                <classpath refid="@{classpath-refid}"/>
+            </javac>
+            <copy todir="${java.module.classes}" failonerror="false">
+                <fileset dir="@{module}/src/main/resources" includes="**"/>
+            </copy>
+
+            <mkdir dir="${java.build.lib}"/>
+            <jar jarfile="${java.build.lib}/@{module}.jar" basedir="${java.module.classes}">
+                <manifest>
+                    <attribute name="Implementation-Url" value="http://nobodyelses.com"/>
+                    <attribute name="Implementation-Version" value="${app.version}"/>
+                    <attribute name="Implementation-Vendor" value="Nobodyelses, LLC"/>
+                    <attribute name="Implementation-Vendor-Id" value="com.nobodyelses"/>
+                </manifest>
+            </jar>
+            <ant-fix-jar jarfile="${java.build.lib}/@{module}.jar"/>
+
+            <mkdir dir="${java.module.testclasses}"/>
+            <javac srcdir="@{module}/src/test/java"
+                   destdir="${java.module.testclasses}"
+                   optimize="false"
+                   deprecation="false"
+                   debug="true"
+                   source="@{version}"
+                   target="@{version}"
+                   includeantruntime="false"
+                    >
+                <!--suppress AntResolveInspection -->
+                <classpath refid="@{classpath-refid}"/>
+                <classpath location="${java.build.lib}/@{module}.jar"/>
+                <classpath refid="java.lib.test"/>
+            </javac>
+            <copy todir="${java.module.testclasses}" failonerror="false">
+                <fileset dir="@{module}/src/test/resources" includes="**"/>
+            </copy>
+        </sequential>
+    </macrodef>
+
+    <target name="build-java"
+            depends="http-server"
+            description="Build out-of-date java modules."/>
+
+    <target name="http-server">
+        <path id="cp">
+            <path refid="java.lib.compile"/>
+            <path refid="java.lib.runtime"/>
+        </path>
+        <build-jar module="http-server" classpath-refid="cp" version="1.7"/>
+    </target>
+
+    <target name="clean" depends="clean-js" description="Clean the build, deleting the ./build folder.">
+        <delete dir="${build.home}"/>
+    </target>
+
+    <target name="build" depends="build-java" description="Build all out-of-date modules."/>
+
+    <!-- TODO: build a template 'pristine' http-app, copy to another tree for dev testing so we don't end up with cruft in deb (low risk on build server though). -->
+    <target name="deb" depends="http-app-dev" description="Build debian packge.">
+        <property name="debian.home" value="${basedir}/build/staging/debian"/>
+        <property name="package.home" value="${debian.home}/opt/${package.name}"/>
+
+        <mkdir dir="${package.home}"/>
+
+        <copy todir="${debian.home}" overwrite="true">
+            <fileset dir="${basedir}/installers/debian-package/root" includes="**"/>
+        </copy>
+        <copy todir="${package.home}/etc" overwrite="true">
+            <fileset dir="${basedir}/etc" includes="client.ks,client.ts,*.sql"/>
+        </copy>
+        <copy todir="${debian.home}" overwrite="true">
+            <fileset dir="${basedir}/installers/debian-package" includes="DEBIAN/**"/>
+        </copy>
+
+        <fixcrlf eol="unix" srcdir="${debian.home}/opt/${package.name}/etc" includes="*.properties"/>
+
+        <!-- copy the compiled web app -->
+        <copy todir="${package.home}/webapps/root">
+            <fileset dir="${webapp.home}" includes="**"/>
+        </copy>
+
+        <taskdef name="deb" classname="com.googlecode.ant_deb_task.Deb">
+            <classpath location="lib/build/ant-deb-0.0.1.jar"/>
+        </taskdef>
+
+        <mkdir dir="${artifacts.home}"/>
+
+        <deb todir="${artifacts.home}"
+             package="${package.name}"
+             section="web"
+             depends=""
+             postinst="installers/debian-package/DEBIAN/postinst"
+             postrm="installers/debian-package/DEBIAN/postrm"
+             preinst="installers/debian-package/DEBIAN/preinst"
+             prerm="installers/debian-package/DEBIAN/prerm"
+             architecture="i386"
+                >
+            <version upstream="${app.version}" debian="1"/>
+            <maintainer name="Monzano Vending" email="info@monzanogroup.com"/>
+            <description synopsis="Monzano Vending Management System">
+                Copyright(c)2014 Monzano Vending, LLC
+                All Rights Reserved.
+                This is LICENSED SOFTWARE, unauthorized
+                use is prohibited software is licensed
+                under terms you should have received
+                all usage must comply with terms as
+                stated.
+            </description>
+
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="**" username="root" group="root"
+                        excludes="bin/**, logs/**"/>
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="bin/*" filemode="755"
+                        username="root" group="root"/>
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="logs/**" filemode="775"
+                        username="monzano" group="adm"/>
+            <tarfileset dir="${debian.home}" prefix="/" includes="etc/**" filemode="755" username="root" group="root"/>
+
+            <!-- 32 bit specific -->
+            <tarfileset dir="installers/debian-package/wrapper/linux-x86-32" prefix="/opt/${package.name}/bin" includes="*"
+                        filemode="755" username="root" group="root"/>
+
+            <conffiles dir="${debian.home}/opt/${package.name}/etc" prefix="/opt/${package.name}/etc"
+                       includes="*.properties"/>
+            <conffiles dir="${debian.home}/opt/${package.name}/bin" prefix="/opt/${package.name}/bin"
+                       includes="*.conf"/>
+        </deb>
+
+        <deb todir="${artifacts.home}"
+             package="${package.name}"
+             section="web"
+             depends=""
+             postinst="installers/debian-package/DEBIAN/postinst"
+             postrm="installers/debian-package/DEBIAN/postrm"
+             preinst="installers/debian-package/DEBIAN/preinst"
+             prerm="installers/debian-package/DEBIAN/prerm"
+             architecture="amd64"
+                >
+            <version upstream="${app.version}" debian="1"/>
+            <maintainer name="Monzano Vending, LLC" email="info@monzanogroup.com"/>
+            <description synopsis="Monzano Vending Management System">
+                Copyright(c)2014 Monzano Vending, LLC
+                All Rights Reserved.
+                This is LICENSED SOFTWARE, unauthorized
+                use is prohibited software is licensed
+                under terms you should have received
+                all usage must comply with terms as
+                stated.
+            </description>
+
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="**" username="root" group="root"
+                        excludes="bin/**, logs/**"/>
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="bin/*" filemode="755"
+                        username="root" group="root"/>
+            <tarfileset dir="${package.home}" prefix="/opt/${package.name}" includes="logs/**" filemode="775"
+                        username="monzano" group="adm"/>
+            <tarfileset dir="${debian.home}" prefix="/" includes="etc/**" filemode="755" username="root" group="root"/>
+
+            <!-- 64 bit specific -->
+            <tarfileset dir="installers/debian-package/wrapper/linux-x86-64" prefix="/opt/${package.name}/bin" includes="*"
+                        filemode="755" username="root" group="root"/>
+
+            <conffiles dir="${debian.home}/opt/${package.name}/etc" prefix="/opt/${package.name}/etc"
+                       includes="*.properties"/>
+            <conffiles dir="${debian.home}/opt/${package.name}/bin" prefix="/opt/${package.name}/bin"
+                       includes="*.conf"/>
+        </deb>
+
+        <checksum algorithm="sha1">
+            <fileset dir="${artifacts.home}" includes="*.deb"/>
+        </checksum>
+    </target>
+
+    <target name="src-dist" description="Archives the main source tree (includes checksum)">
+        <!-- tar.gz the source distribution -->
+        <mkdir dir="${artifacts.home}"/>
+        <delete>
+            <fileset dir="${artifacts.home}" includes="*-src.tar.gz"/>
+        </delete>
+        <tar destfile="${artifacts.home}/${package.name}_${app.version}-src.tar.gz" longfile="gnu" compression="gzip">
+            <tarfileset dir="${basedir}" defaultexcludes="true" prefix="${package.name}_${app.version}-src"
+                        preserveleadingslashes="true">
+                <exclude name="**/.*/**"/>
+                <exclude name="build/**"/>
+                <exclude name="tmp/**"/>
+                <exclude name="rsl/**"/>
+                <exclude name="local.properties"/>
+            </tarfileset>
+        </tar>
+        <checksum file="${artifacts.home}/${package.name}_${app.version}-src.tar.gz" algorithm="sha1"/>
+    </target>
+
+    <!-- ================================ UNIT TESTS =============================================================== -->
+
+    <target name="test" depends="build-java" description="Run unit tests.">
+
+        <property name="junit.temp" value="build/junit-temp"/>
+        <property name="junit.report" value="build/junit-report"/>
+        <mkdir dir="${junit.temp}"/>
+        <mkdir dir="${junit.report}"/>
+
+        <!-- Build enough of the animalland app folder layout to run tests, don't want to run them in appserver.home
+             so as not to mix unit tests and developer test output. -->
+        <property name="test.home" value="${build.home}/test.home"/>
+        <mkdir dir="${test.home}"/>
+
+        <copy tofile="${test.home}/etc/test.properties" file="${basedir}/etc/database.properties">
+            <filterset>
+                <filter token="database.driver" value="${database.driver}"/>
+                <filter token="database.master-url" value="${database.master-url}"/>
+                <filter token="database.url" value="${database.url}"/>
+                <filter token="database.user" value="${database.user}"/>
+                <filter token="database.password" value="${database.password}"/>
+                <filter token="database.name" value="animallandunit"/>
+                <filter token="database.dialect" value="${database.dialect}"/>
+            </filterset>
+        </copy>
+
+        <path id="runtime.classpath">
+            <fileset dir="lib/runtime" includes="*.jar"/>
+            <fileset dir="${java.build.lib}" includes="*.jar"/>
+        </path>
+
+        <echo message="Re-creating unit test database ..."/>
+        <delete>
+            <fileset dir="${basedir}/build" includes="unittest*"/>
+        </delete>
+
+        <!-- default to run all tests, unless overridden on command line to run a single test. -->
+        <property name="test" value="*Test"/>
+        <echo>
+            Running tests based on pattern '${test}' (overridable with -Dtest=)
+            - Active Directory tests excluded unless property 'runActiveDirectory' is defined.
+        </echo>
+
+        <!-- TODO cobertura's last release was 2010 and it does not work with 1.7, have to look at http://www.eclemma.org/jacoco/ -->
+        <!--<property name="instrumented.dir" value="${build.home}/tests/instrumented"/>-->
+        <!--<mkdir dir="${instrumented.dir}"/>-->
+
+        <!--<cobertura-instrument todir="${instrumented.dir}" datafile="${build.home}/cobertura.ser">-->
+            <!--<ignore regex="org.apache.log4j.*"/>-->
+            <!--<fileset dir="${java.build.classes}">-->
+                <!--<include name="**/*.class"/>-->
+                <!--&lt;!&ndash; ignoring these for now, add in later &ndash;&gt;-->
+            <!--</fileset>-->
+        <!--</cobertura-instrument>-->
+
+        <junit fork="yes" haltonfailure="no" errorproperty="junit.result" forkmode="once"
+               dir="${test.home}" printsummary="false" showoutput="false" outputtoformatters="false"
+               filtertrace="true">
+            <!-- Uncomment to debug unit tests ... be sure to comment out again before committing! -->
+            <!--<jvmarg value="-Xdebug"/>-->
+            <!--<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>-->
+            <!--<sysproperty key="java.net.preferIPv4Stack" value="true"/>-->
+            <!--<sysproperty key="net.sourceforge.cobertura.datafile" file="${build.home}/cobertura.ser"/>-->
+            <sysproperty key="java.util.logging.config.file" value="${basedir}/etc/junit-logging.properties"/>
+            <sysproperty key="animalland.database.configuration" value="etc/test.properties"/>
+            <!--<classpath location="${instrumented.dir}"/>-->
+            <classpath>
+                <fileset dir="lib/compile" includes="*.jar"/>
+                <fileset dir="lib/runtime" includes="*.jar"/>
+                <fileset dir="lib/test" includes="*.jar"/>
+                <fileset dir="${java.build.lib}" includes="*.jar"/>
+
+                <!-- Various module test classes -->
+                <pathelement location="${java.build.testclasses}/http-server"/>
+            </classpath>
+            <!--<classpath refid="cobertura.classpath"/>-->
+            <formatter type="xml" usefile="true"/>
+            <formatter classname="com.paltronics.testing.OneLinerFormatter" usefile="false"/>
+
+            <batchtest todir="${junit.temp}">
+                <fileset dir="${java.build.testclasses}/http-server">
+                    <include name="**/${test}.class"/>
+                </fileset>
+            </batchtest>
+        </junit>
+
+        <junitreport todir="${junit.temp}">
+            <fileset dir="${junit.temp}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="noframes" todir="${junit.report}"/>
+        </junitreport>
+        <fail if="junit.result" message="One or more unit tests has failed."/>
+        <fail if="junit.result">
+            *** One or more unit tests has failed. ***
+
+            Logging output for unit tests should be in ${test.home}/junit.0.log
+        </fail>
+    </target>
+
+    <target name="coverage-report" depends="test" description="Code Coverage report for unit tests">
+        <cobertura-report format="html" destdir="${build.home}/codecoverage"
+                          datafile="${build.home}/cobertura.ser">
+            <fileset dir="${basedir}/http-server/src/main/java">
+                <include name="**/*.java" />
+            </fileset>
+        </cobertura-report>
+    </target>
+    <!-- ============================================= DEBUGGING TARGETS =========================================== -->
+
+    <target name="http-app-dev"
+            depends="build-java, init, optimize"
+            description="Build the webapp.">
+
+        <property name="appserver.home" value="${build.home}/staging/http-app"/>
+        <mkdir dir="${appserver.home}/logs"/>
+        <mkdir dir="${appserver.home}/lib"/>
+        <mkdir dir="${appserver.home}/bin"/>
+        <mkdir dir="${appserver.home}/webapps"/>
+        <copy todir="${appserver.home}">
+            <fileset dir="installers/debian-package/root/opt/animalland" includes="*.jar"/>
+        </copy>
+        <copy todir="${appserver.home}/lib">
+            <fileset dir="installers/debian-package/root/opt/animalland/lib" includes="*.jar"/>
+        </copy>
+        <copy todir="${appserver.home}/webapps">
+            <fileset dir="installers/debian-package/root/opt/animalland/webapps" includes="**"/>
+        </copy>
+        <copy todir="${appserver.home}/bin">
+            <fileset dir="installers/debian-package/root/opt/animalland/bin" includes="*.sh" />
+        </copy>
+        <chmod perm="ugo+rx" dir="${appserver.home}/bin" includes="*.sh"/>
+        <copy todir="${appserver.home}/etc">
+            <fileset dir="installers/debian-package/root/opt/animalland/etc" includes="*.xml" />
+            <fileset dir="etc">
+                <include name="client.ks"/>
+                <include name="client.ts"/>
+                <include name="*.sql"/>
+            </fileset>
+        </copy>
+        <copy todir="${appserver.home}/etc">
+            <fileset dir="etc" includes="*.properties" />
+            <filterset>
+                <filter token="database.driver" value="${database.driver}"/>
+                <filter token="database.url" value="${database.url}"/>
+                <filter token="database.user" value="${database.user}"/>
+                <filter token="database.password" value="${database.password}"/>
+                <filter token="database.name" value="${database.name}"/>
+                <filter token="database.dialect" value="${database.dialect}"/>
+            </filterset>
+        </copy>
+
+        <property name="webapp.home" value="${appserver.home}/webapps/root"/>
+        <mkdir dir="${webapp.home}/WEB-INF/lib"/>
+        <copy todir="${webapp.home}">
+            <fileset dir="http-app/src/main/webapp" includes="**"/>
+            <fileset dir="${build.home}/staging/lib" includes="*.swf"/>
+        </copy>
+        <copy todir="${webapp.home}/WEB-INF/lib">
+            <fileset dir="lib/runtime" includes="*.jar"/>
+            <fileset dir="${build.home}/staging/lib" includes="*.jar"/>
+        </copy>
+    </target>
+
+    <target name="check-userprop-file-exists">
+        <available file="${user.properties}" property="userprop-file-exists"/>
+    </target>
+
+    <target name="check-all-properties-defined">
+        <condition property="all-properties-defined">
+            <and>
+                <isset property="database.driver"/>
+                <isset property="database.name"/>
+                <isset property="database.master-url"/>
+                <isset property="database.url"/>
+                <isset property="database.user"/>
+                <isset property="database.password"/>
+                <isset property="database.dialect"/>
+            </and>
+        </condition>
+    </target>
+
+    <target name="check-any-properties-defined" depends="check-all-properties-defined, check-userprop-file-exists">
+        <condition property="any-properties-defined">
+            <or>
+                <isset property="all-properties-defined"/>
+                <isset property="userprop-file-exists"/>
+            </or>
+        </condition>
+    </target>
+
+    <target name="load-props" depends="check-all-properties-defined" unless="all-properties-defined">
+        <property file="${user.properties}"/>
+    </target>
+
+    <target name="init" depends="load-props, check-any-properties-defined" unless="any-properties-defined">
+
+        <echo>
+        </echo>
+
+        <echo file="${user.properties}">
+            # MySQL settings
+            #database.driver = com.mysql.jdbc.Driver
+            #database.name = animalland_dev
+            #database.master-url = jdbc:mysql://localhost/mysql
+            #database.url = jdbc:mysql://localhost/${database.name}
+            #database.user = root
+            #database.password = @crypt:2VGCJNowU23GejQcmq1pHg==
+            #database.password = CHANGE_ME
+            #database.dialect = org.hibernate.dialect.MySQL5InnoDBDialect
+
+            # Mongo settings
+            database.driver = com.google.code.morphia.Morhia
+            database.url = morphia://localhost:27017/animalland
+            database.user =
+            database.password =
+        </echo>
+
+        <fail>
+            *
+
+
+            *** IMPORTANT ***
+
+            Created default ${user.properties} file.
+
+            You MUST customize this for your local build environment,
+            after which you may run the build again.
+
+            Alternately, define the same properties (ie if on build server) before running the build.
+        </fail>
+    </target>
+
+    <target name="drop-mysql" depends="init">
+        <echo message="Dropping MYSQL database ${database.name}"/>
+        <path id="dbdriver.classpath">
+            <fileset dir="lib/runtime" includes="mysql*.jar"/>
+        </path>
+        <sql
+                driver="${database.driver}"
+                url="${database.master-url}"
+                userid="${database.user}"
+                password="${database.password}"
+                classpathref="dbdriver.classpath">
+            drop database if exists `${database.name}`;
+            create database `${database.name}`;
+        </sql>
+    </target>
+
+    <target name="schema-recreate" depends="http-app-dev,drop-mysql,schema-upgrade"
+            description="Drop and re-create a new database based on settings in local.properties">
+    </target>
+
+    <target name="schema-upgrade" depends="http-app-dev"
+            description="Create/upgrade existing database based on settings in local.properties">
+    </target>
+
+    <target name="run" depends="http-app-dev, check-architecture" description="Build and run the application.">
+        <java fork="yes" dir="${appserver.home}" classname="org.mortbay.start.Main">
+            <classpath>
+                <fileset dir="${appserver.home}" includes="*.jar"/>
+            </classpath>
+            <sysproperty key="javax.net.ssl.keyStore" value="etc/client.ks"/>
+            <sysproperty key="javax.net.ssl.keyStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="etc/client.ts"/>
+            <sysproperty key="javax.net.ssl.trustStorePassword" value="animalland"/>
+            <sysproperty key="java.library.path" value="${basedir}/installers/debian-package/wrapper/linux-x86-${register-size}"/>
+            <!--<jvmarg value="-Xdebug"/>-->
+            <!--<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>-->
+            <!--<jvmarg value="-agentpath:/home/randy/Downloads/yjp-2013-build-13044/bin/linux-x86-64/libyjpagent.so"/>-->
+        </java>
+    </target>
+
+
+    <target name="debug" depends="http-app-dev, check-architecture" description="Build and run the application.">
+        <java fork="yes" dir="${appserver.home}" classname="org.mortbay.start.Main">
+            <classpath>
+                <fileset dir="${appserver.home}" includes="*.jar"/>
+            </classpath>
+            <sysproperty key="javax.net.ssl.keyStore" value="etc/client.ks"/>
+            <sysproperty key="javax.net.ssl.keyStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.trustStore" value="etc/client.ts"/>
+            <sysproperty key="javax.net.ssl.trustStorePassword" value="animalland"/>
+            <sysproperty key="java.library.path" value="${basedir}/installers/debian-package/wrapper/linux-x86-${register-size}"/>
+            <!--<jvmarg value="-Xdebug"/>-->
+            <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
+        </java>
+    </target>
+
+    <target name="check-architecture" depends="os-family,reg-unix" >
+        <echo>OS Name:   ${os.name}</echo>
+        <echo>OS Family: ${os-family}</echo>
+        <echo>Reg Size:  ${register-size}</echo>
+    </target>
+
+    <target name="os-family" >
+        <condition property="os-family" value="unix" else="windows">
+            <os family="unix" />
+        </condition>
+
+        <condition property="unix">
+            <os family="unix" />
+        </condition>
+    </target>
+
+    <!-- Test under GNU/Linux -->
+    <target name="reg-unix" if="unix">
+        <exec dir="." executable="uname" outputproperty="result">
+            <arg line="-m"/>
+        </exec>
+
+        <!-- String ends in 64 -->
+        <condition property="x64">
+            <matches string="${result}" pattern="^.*64$"/>
+        </condition>
+
+        <condition property="register-size" value="64" else="32">
+            <isset property="x64"/>
+        </condition>
+    </target>
+
+    <target name="check-js">
+        <condition property="isMainNotExists">
+            <not>
+              <available file="http-app/src/main/webapp/js/libs/compiled.js"/>
+            </not>
+        </condition>
+    </target>
+
+    <target name="optimize" description="Runs the require.js optimizer." depends="check-js" if="isMainNotExists">
+        <echo message="http-app/src/main/webapp/js/libs/compiled.js not exists: ${isMainNotExists}"/>
+        <java fork="yes" dir="${basedir}" classname="org.mozilla.javascript.tools.shell.Main">
+            <classpath>
+                <fileset dir="lib/compile">
+                    <include name="**/*.jar"/>
+                </fileset>
+            </classpath>
+            <arg value="r.js" />
+            <arg value="-o" />
+            <arg value="http-app/src/main/webapp/js/app.build.js" />
+        </java>
+    </target>
+
+    <target name="check-app-folder-exists">
+        <available file="${user.properties}" property="app-folder-exists"/>
+    </target>
+
+    <target name="clean-js" depends="check-app-folder-exists" description="Removes any optimized js files." if="app-folder-exists">
+        <delete>
+            <fileset dir="http-app/src/main/webapp/js/libs" includes="compiled.js"/>
+        </delete>
+    </target>
+
+    <target name="generate-jooq">
+        <java fork="yes" dir="${basedir}" classname="org.jooq.util.GenerationTool">
+            <classpath>
+                <fileset dir="lib/runtime">
+                    <include name="**/jooq*.jar"/>
+                    <include name="**/mysql*.jar"/>
+                </fileset>
+                <pathelement location="http-server/src/main/resources"/>
+            </classpath>
+            <arg value="/animalland.xml" />
+        </java>
+    </target>
+
+    <target name="build-executable-jars" description="Create the executable jar files">
+        <path id="libs">
+            <fileset dir="${basedir}" includes="lib/runtime/*.jar"/>
+        </path>
+
+        <mkdir dir="build/staging/classes"/>
+        <javac source="1.7" target="1.7" debug="on" srcdir="http-server/src/main/java" destdir="build/staging/classes" includeantruntime="false">
+            <classpath refid="libs"/>
+        </javac>
+
+        <property name="dist.base" value="build/staging/http-server"/>
+
+        <jar destfile="${dist.base}/${ant.project.name}.jar">
+            <fileset dir="build/staging/classes" />
+            <archives>
+                <zips>
+                    <fileset dir="lib/runtime" includes="**/*.jar" />
+                </zips>
+            </archives>
+            <manifest>
+                <attribute name="Main-Class" value="com.nobodyelses.httpserver.Main" />
+            </manifest>
+        </jar>
+
+    </target>
+
+    <target name="build-executable-jars-old" description="Create the executable jar files">
+        <path id="libs">
+            <fileset dir="${basedir}" includes="lib/runtime/*.jar"/>
+        </path>
+
+        <mkdir dir="build/staging/classes"/>
+        <javac source="1.7" target="1.7" debug="on" srcdir="http-server/src/main/java" destdir="build/staging/classes" includeantruntime="false">
+            <classpath refid="libs"/>
+        </javac>
+
+        <pathconvert property="manifest-cp" pathsep=" ">
+            <path refid="libs"/>
+            <mapper>
+                <chainedmapper>
+                    <flattenmapper/>
+                    <globmapper from="*" to="lib/*"/>
+                </chainedmapper>
+            </mapper>
+        </pathconvert>
+
+        <property name="dist.base" value="build/staging/http-server"/>
+
+        <jar jarfile="${dist.base}/http-server.jar" basedir="build/staging/classes">
+            <manifest>
+                <attribute name="Main-Class" value="com.nobodyelses.httpserver.Main"/>
+                <attribute name="Class-Path" value="${manifest-cp}"/>
+            </manifest>
+        </jar>
+    </target>
+</project>
