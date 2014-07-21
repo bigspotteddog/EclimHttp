@@ -1,6 +1,6 @@
 # Eclim HTTP
 
-A HTTP wrapper over eclim.
+An HTTP wrapper over eclim.
 
 ## Build
 
