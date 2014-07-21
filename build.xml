@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="eclim-command" default="build" basedir=".">
+<project name="eclim-command" default="build-executable-jars" basedir=".">
 
     <property environment="env"/>
     <property name="env.BUILD_NUMBER" value="UNSTABLE"/>
@@ -285,7 +285,7 @@
         <mkdir dir="${junit.temp}"/>
         <mkdir dir="${junit.report}"/>
 
-        <!-- Build enough of the animalland app folder layout to run tests, don't want to run them in appserver.home
+        <!-- Build enough of the httpserver app folder layout to run tests, don't want to run them in appserver.home
              so as not to mix unit tests and developer test output. -->
         <property name="test.home" value="${build.home}/test.home"/>
         <mkdir dir="${test.home}"/>
@@ -297,7 +297,7 @@
                 <filter token="database.url" value="${database.url}"/>
                 <filter token="database.user" value="${database.user}"/>
                 <filter token="database.password" value="${database.password}"/>
-                <filter token="database.name" value="animallandunit"/>
+                <filter token="database.name" value="httpserverunit"/>
                 <filter token="database.dialect" value="${database.dialect}"/>
             </filterset>
         </copy>
@@ -340,7 +340,7 @@
             <!--<sysproperty key="java.net.preferIPv4Stack" value="true"/>-->
             <!--<sysproperty key="net.sourceforge.cobertura.datafile" file="${build.home}/cobertura.ser"/>-->
             <sysproperty key="java.util.logging.config.file" value="${basedir}/etc/junit-logging.properties"/>
-            <sysproperty key="animalland.database.configuration" value="etc/test.properties"/>
+            <sysproperty key="httpserver.database.configuration" value="etc/test.properties"/>
             <!--<classpath location="${instrumented.dir}"/>-->
             <classpath>
                 <fileset dir="lib/compile" includes="*.jar"/>
@@ -396,20 +396,20 @@
         <mkdir dir="${appserver.home}/bin"/>
         <mkdir dir="${appserver.home}/webapps"/>
         <copy todir="${appserver.home}">
-            <fileset dir="installers/debian-package/root/opt/animalland" includes="*.jar"/>
+            <fileset dir="installers/debian-package/root/opt/httpserver" includes="*.jar"/>
         </copy>
         <copy todir="${appserver.home}/lib">
-            <fileset dir="installers/debian-package/root/opt/animalland/lib" includes="*.jar"/>
+            <fileset dir="installers/debian-package/root/opt/httpserver/lib" includes="*.jar"/>
         </copy>
         <copy todir="${appserver.home}/webapps">
-            <fileset dir="installers/debian-package/root/opt/animalland/webapps" includes="**"/>
+            <fileset dir="installers/debian-package/root/opt/httpserver/webapps" includes="**"/>
         </copy>
         <copy todir="${appserver.home}/bin">
-            <fileset dir="installers/debian-package/root/opt/animalland/bin" includes="*.sh" />
+            <fileset dir="installers/debian-package/root/opt/httpserver/bin" includes="*.sh" />
         </copy>
         <chmod perm="ugo+rx" dir="${appserver.home}/bin" includes="*.sh"/>
         <copy todir="${appserver.home}/etc">
-            <fileset dir="installers/debian-package/root/opt/animalland/etc" includes="*.xml" />
+            <fileset dir="installers/debian-package/root/opt/httpserver/etc" includes="*.xml" />
             <fileset dir="etc">
                 <include name="client.ks"/>
                 <include name="client.ts"/>
@@ -479,7 +479,7 @@
         <echo file="${user.properties}">
             # MySQL settings
             #database.driver = com.mysql.jdbc.Driver
-            #database.name = animalland_dev
+            #database.name = httpserver_dev
             #database.master-url = jdbc:mysql://localhost/mysql
             #database.url = jdbc:mysql://localhost/${database.name}
             #database.user = root
@@ -489,7 +489,7 @@
 
             # Mongo settings
             database.driver = com.google.code.morphia.Morhia
-            database.url = morphia://localhost:27017/animalland
+            database.url = morphia://localhost:27017/httpserver
             database.user =
             database.password =
         </echo>
@@ -539,9 +539,9 @@
                 <fileset dir="${appserver.home}" includes="*.jar"/>
             </classpath>
             <sysproperty key="javax.net.ssl.keyStore" value="etc/client.ks"/>
-            <sysproperty key="javax.net.ssl.keyStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.keyStorePassword" value="httpserver"/>
             <sysproperty key="javax.net.ssl.trustStore" value="etc/client.ts"/>
-            <sysproperty key="javax.net.ssl.trustStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.trustStorePassword" value="httpserver"/>
             <sysproperty key="java.library.path" value="${basedir}/installers/debian-package/wrapper/linux-x86-${register-size}"/>
             <!--<jvmarg value="-Xdebug"/>-->
             <!--<jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>-->
@@ -556,9 +556,9 @@
                 <fileset dir="${appserver.home}" includes="*.jar"/>
             </classpath>
             <sysproperty key="javax.net.ssl.keyStore" value="etc/client.ks"/>
-            <sysproperty key="javax.net.ssl.keyStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.keyStorePassword" value="httpserver"/>
             <sysproperty key="javax.net.ssl.trustStore" value="etc/client.ts"/>
-            <sysproperty key="javax.net.ssl.trustStorePassword" value="animalland"/>
+            <sysproperty key="javax.net.ssl.trustStorePassword" value="httpserver"/>
             <sysproperty key="java.library.path" value="${basedir}/installers/debian-package/wrapper/linux-x86-${register-size}"/>
             <!--<jvmarg value="-Xdebug"/>-->
             <jvmarg value="-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"/>
@@ -638,7 +638,7 @@
                 </fileset>
                 <pathelement location="http-server/src/main/resources"/>
             </classpath>
-            <arg value="/animalland.xml" />
+            <arg value="/http-server.xml" />
         </java>
     </target>
 
@@ -664,37 +664,14 @@
             <manifest>
                 <attribute name="Main-Class" value="com.nobodyelses.httpserver.Main" />
             </manifest>
+            <!-- <zipfileset dir="templates" prefix="templates"/> -->
         </jar>
 
-    </target>
+        <mkdir dir="build/staging/http-server/templates"/>
 
-    <target name="build-executable-jars-old" description="Create the executable jar files">
-        <path id="libs">
-            <fileset dir="${basedir}" includes="lib/runtime/*.jar"/>
-        </path>
+        <copy todir="build/staging/http-server/templates" >
+            <fileset dir="${basedir}/templates" />
+        </copy>
 
-        <mkdir dir="build/staging/classes"/>
-        <javac source="1.7" target="1.7" debug="on" srcdir="http-server/src/main/java" destdir="build/staging/classes" includeantruntime="false">
-            <classpath refid="libs"/>
-        </javac>
-
-        <pathconvert property="manifest-cp" pathsep=" ">
-            <path refid="libs"/>
-            <mapper>
-                <chainedmapper>
-                    <flattenmapper/>
-                    <globmapper from="*" to="lib/*"/>
-                </chainedmapper>
-            </mapper>
-        </pathconvert>
-
-        <property name="dist.base" value="build/staging/http-server"/>
-
-        <jar jarfile="${dist.base}/http-server.jar" basedir="build/staging/classes">
-            <manifest>
-                <attribute name="Main-Class" value="com.nobodyelses.httpserver.Main"/>
-                <attribute name="Class-Path" value="${manifest-cp}"/>
-            </manifest>
-        </jar>
     </target>
 </project>
