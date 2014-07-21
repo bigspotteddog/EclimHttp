@@ -155,6 +155,8 @@ public class Main {
                 } else {
                     lastTimeHold = 0;
                 }
+            } else {
+                lastTimeHold = 0;
             }
 
             for (int i = 0; i < 10000 / 200; i++) {
