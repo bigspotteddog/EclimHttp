@@ -667,11 +667,5 @@
             <!-- <zipfileset dir="templates" prefix="templates"/> -->
         </jar>
 
-        <mkdir dir="build/staging/http-server/templates"/>
-
-        <copy todir="build/staging/http-server/templates" >
-            <fileset dir="${basedir}/templates" />
-        </copy>
-
     </target>
 </project>

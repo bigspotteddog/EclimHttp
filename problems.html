@@ -1,0 +1,55 @@
+<html>
+  <head>
+    <title>Problems</title>
+    <style>
+      body {
+      background-color: #161819;
+      color: #aaaaaa;
+      }
+      td, th, strong {
+      font-family: Inconsolata, Monaco, Consolas, 'Courier New', Courier;
+      text-align: left;
+      white-space: nowrap;
+      }
+      .true {
+      color: #aaaaaa;
+      }
+      .false {
+      color: #BF3030;
+      }
+      .text-right {
+      text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+      <strong>Project Name</strong> <select id="project-name"></select>
+    </div>
+    <table>
+      <thead>
+        <tr id="report-header">
+          <th>Message <input id="message-filter" /></th>
+          <th>Path <input id="path-filter" /></th>
+          <th class="text-right">Line</th>
+          <th class="text-right">Pos</th>
+        </tr>
+      </thead>
+      <script type="text/template" id="row-template">
+        <tr class="{{warning}}">
+          <td>{{message}}</td>
+          <td class="filename" data-full="{{filename}}"
+              data-short="{{filenameShort}}"
+              title="{{filename}}">{{filenameShort}}</td>
+          <td class="text-right">{{line}}</td>
+          <td class="text-right">{{column}}</td>
+        </tr>
+      </script>
+      <tbody id="report-body"></tbody>
+    </table>
+    <script src="js/mustache.js"></script>
+    <script src="js/jquery-2.1.1.min.js"></script>
+    <script src="js/projectselector.js"></script>
+    <script src="js/problems.js"></script>
+  </body>
+</html>

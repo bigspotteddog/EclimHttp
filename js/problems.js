@@ -1,17 +1,18 @@
-/*
- This file must be copy-pasted into problems.html for the moment. It's
- maintained externally in order to facilitate working on it. -WKM
-*/
+;(function (root, $, mustache) {
 
-(function ($, mustache) {
+  if (typeof root.eclimHttp === "undefined") {
+    root.eclimHttp = {};
+  }
 
   var ns = {
     messageFilter: "",
     pathFilter: "",
-    APIURL: window.location.href.replace("/data/", "/api/"),
+    APIURL: "/api/problems/-p",
     TMPL: $("#row-template").html(),
-    REFRESH_DELAY: 1000 // milliseconds
-  };
+    REFRESH_DELAY: 1000, // milliseconds
+    SORT_ORDER: ["warning", "filename", "message", "line", "column"]
+  },
+  projectSelector = root.eclimHttp.projectSelector;
 
   ns.shrinkPath = function (path) {
     var parts = path.split("/"), output = "";
@@ -29,26 +30,17 @@
   };
 
   /**
-   * Sort by filename, then by message, then by line number, then by column
+   * Sorts by order: warning, filename, message, line, column
    */
   ns.sortPredicate = function (rowA, rowB) {
-    if (rowA.filename === rowB.filename) {
-      if (rowA.message === rowB.message) {
-        if (rowA.line === rowB.line) {
-          if (rowA.column === rowB.column) {
-            return 0;
-          } else {
-            return rowA.column > rowB.column ? -1 : 1;
-          }
-        } else {
-          return rowA.line > rowB.line ? -1 : 1;
-        }
-      } else {
-        return rowA.line > rowB.line ? -1 : 1;
+    var i, key;
+    for (i = 0; i < ns.SORT_ORDER.length; i++) {
+      key = ns.SORT_ORDER[i];
+      if (rowA[key] !== rowB[key]) {
+        return rowA[key] > rowB[key] ? 1 : -1;
       }
-    } else {
-      return rowA.filename > rowB.filename ? -1 : 1;
     }
+    return 0;
   };
 
   ns.render = function () {
@@ -76,8 +68,8 @@
     }
   };
 
-  ns.getProblems = function () {
-    $.getJSON(ns.APIURL, function (data) {
+  ns.getProblems = function (projectName) {
+    $.getJSON(ns.APIURL + "/" + projectName, function (data) {
       ns.data = data;
       ns.data.sort(ns.sortPredicate);
       $(ns).trigger("problems:updated");
@@ -87,12 +79,25 @@
   $(ns).on("problems:updated", ns.render);
 
   $(function () {
-    $("#report-header").bind("keyup,blur,change", function () {
+    var selector = new projectSelector.ProjectSelector("project-name"),
+        intervalId = -1;
+
+    $(selector).on("project-selector:change", function () {
+      clearInterval(intervalId);
+      if (selector.selectedProject.name !== "Select One") {
+        intervalId = setInterval(function () {
+          ns.getProblems(selector.selectedProject.name);
+        }, ns.REFRESH_DELAY);
+      }
+    });
+
+    selector.getProjects();
+
+    $("#report-header").bind("keyup blur change", function () {
       ns.messageFilter = $("#message-filter").val();
       ns.pathFilter = $("#path-filter").val();
       $(ns).trigger("problems:updated");
     });
-    ns.getProblems();
 
     $("#report-body").on("mouseenter", "td.filename", function () {
       $(this).text($(this).data("full"));
@@ -100,7 +105,7 @@
       $(this).text($(this).data("short"));
     });
 
-    setInterval(ns.getProblems, ns.REFRESH_DELAY);
   });
 
-}(jQuery, Mustache));
+  root.eclimHttp.problems = ns;
+}(this, jQuery, Mustache));
