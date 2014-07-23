@@ -1,5 +1,6 @@
 package com.nobodyelses.httpserver;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,6 +18,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 import com.github.mustachejava.DefaultMustacheFactory;
@@ -85,6 +87,7 @@ public class Main {
         TinyHttpServer tiny = new TinyHttpServer(port, root);
         tiny.route("/data", new EclimHandler());
         tiny.route("/data/problems", new ProblemsHandler());
+        tiny.route("/api/problems", new ApiProblemsHandler());
         tiny.start();
     }
 
@@ -126,6 +129,23 @@ public class Main {
     private long lastTimeHold = 0;
 
     private class ProblemsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            log.info("processing problems");
+            String response = new Scanner(
+                new File("templates/problems.html")).useDelimiter("\\Z").next();
+            t.sendResponseHeaders(200, response.length());
+            OutputStream os = t.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+
+            if (!projectPath.equals(Main.this.projectPath)) {
+                watchProject(projectPath);
+            }
+        }
+    }
+
+      private class ApiProblemsHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
             log.info("processing problems");
@@ -183,65 +203,6 @@ public class Main {
 
             response = processEclimCommand(new String[] {"-command", "problems", "-p", project});
             List<Map<String, Object>> problems = gson.fromJson(response, listType);
-            log.info(response);
-
-            if (problems.isEmpty()) {
-                Map<String, Object> item = new HashMap<String, Object>();
-                item.put("message", "No problems");
-                problems.add(item);
-            } else {
-                for (Map<String, Object> item : problems) {
-                    String filename = (String) item.get("filename");
-                    filename = filename.substring(projectPath.length() + 1);
-                    item.put("filename", filename);
-
-                    item.put("line", ((Double) item.get("line")).intValue());
-                    item.put("column", ((Double) item.get("column")).intValue());
-                }
-
-                Collections.sort(problems, new Comparator<Map<String, Object>>() {
-                    @Override
-                    public int compare(Map<String, Object> o1, Map<String, Object> o2) {
-                        Boolean b1 = (Boolean) o1.get("warning");
-                        Boolean b2 = (Boolean) o2.get("warning");
-
-                        int compare = b1.compareTo(b2);
-
-                        if (compare != 0) {
-                            return compare;
-                        }
-
-                        String p1 = (String) o1.get("filename");
-                        String p2 = (String) o2.get("filename");
-
-                        compare = p1.compareTo(p2);
-                        if (compare != 0) {
-                            return compare;
-                        }
-
-                        int l1 = (int) o1.get("line");
-                        int l2 = (int) o2.get("line");
-
-                        if (l1 != l2) {
-                            return l1 - l2;
-                        }
-
-                        int c1 = (int) o1.get("column");
-                        int c2 = (int) o2.get("column");
-
-                        return c1 - c2;
-                    }
-                });
-            }
-
-            FileReader reader = new FileReader("templates/problems.html");
-
-            Map<String, Object> data = new HashMap<String, Object>();
-            data.put("project", project);
-            data.put("problems", problems);
-            data.put("key", lastTime);
-            response = template(reader, data);
-
             t.sendResponseHeaders(200, response.length());
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
@@ -290,7 +251,7 @@ public class Main {
 
         Process process = new ProcessBuilder(list).start();
         InputStream is = process.getInputStream();
-        java.util.Scanner scanner = new java.util.Scanner(is);
+        Scanner scanner = new java.util.Scanner(is);
         try {
             if (scanner.hasNext()) {
                 String response = scanner.useDelimiter("\\A").next();

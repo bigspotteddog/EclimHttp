@@ -1,59 +1,16 @@
-<html>
-<head>
-<title>Problems</title>
-<style>
-body {
-    background-color: #161819;
-    color: #aaaaaa;
-}
-td, th {
-    font-family: Inconsolata, Monaco, Consolas, 'Courier New', Courier;
-    text-align: left;
-    white-space: nowrap;
-}
-.true {
-    color: #aaaaaa;
-}
-.false {
-    color: #BF3030;
-}
-.text-right {
-    text-align: right;
-}
-</style>
-</head>
-<body>
-    <table>
-      <thead>
-        <tr id="report-header">
-            <th>Message <input id="message-filter" /></th>
-            <th>Path <input id="path-filter" /></th>
-            <th class="text-right">Line</th>
-            <th class="text-right">Pos</th>
-        </tr>
-      </thead>
-      <script type="text/template" id="row-template">
-        <tr class="{{warning}}">
-          <td>{{message}}</td>
-          <td class="filename" data-full="{{filename}}"
-          data-short="{{filenameShort}}"
-          title="{{filename}}">{{filenameShort}}</td>
-          <td class="text-right">{{line}}</td>
-          <td class="text-right">{{column}}</td>
-        </tr>
-      </script>
-      <tbody id="report-body"></tbody>
-    </table>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.js"></script>
-    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
-    <script>
+/*
+ This file must be copy-pasted into problems.html for the moment. It's
+ maintained externally in order to facilitate working on it. -WKM
+*/
+
 (function ($, mustache) {
 
   var ns = {
     messageFilter: "",
     pathFilter: "",
     APIURL: window.location.href.replace("/data/", "/api/"),
-    TMPL: $("#row-template").html()
+    TMPL: $("#row-template").html(),
+    REFRESH_DELAY: 1000 // milliseconds
   };
 
   ns.shrinkPath = function (path) {
@@ -71,6 +28,29 @@ td, th {
     return output;
   };
 
+  /**
+   * Sort by filename, then by message, then by line number, then by column
+   */
+  ns.sortPredicate = function (rowA, rowB) {
+    if (rowA.filename === rowB.filename) {
+      if (rowA.message === rowB.message) {
+        if (rowA.line === rowB.line) {
+          if (rowA.column === rowB.column) {
+            return 0;
+          } else {
+            return rowA.column > rowB.column ? -1 : 1;
+          }
+        } else {
+          return rowA.line > rowB.line ? -1 : 1;
+        }
+      } else {
+        return rowA.line > rowB.line ? -1 : 1;
+      }
+    } else {
+      return rowA.filename > rowB.filename ? -1 : 1;
+    }
+  };
+
   ns.render = function () {
     console.info("Rendering problems.");
     if (ns.data) {
@@ -84,7 +64,7 @@ td, th {
         }
 
         if (ns.pathFilter.length > 0) {
-          if (row.filename.indexOf(ns.pathFilter) === -1) {
+          if (row.path.indexOf(ns.pathFilter) === -1) {
             return;
           }
         }
@@ -99,6 +79,7 @@ td, th {
   ns.getProblems = function () {
     $.getJSON(ns.APIURL, function (data) {
       ns.data = data;
+      ns.data.sort(ns.sortPredicate);
       $(ns).trigger("problems:updated");
     });
   };
@@ -106,7 +87,7 @@ td, th {
   $(ns).on("problems:updated", ns.render);
 
   $(function () {
-    $("#report-header").bind("keyup blur change", function () {
+    $("#report-header").bind("keyup,blur,change", function () {
       ns.messageFilter = $("#message-filter").val();
       ns.pathFilter = $("#path-filter").val();
       $(ns).trigger("problems:updated");
@@ -119,10 +100,7 @@ td, th {
       $(this).text($(this).data("short"));
     });
 
-    setInterval(ns.getProblems, 1000);
+    setInterval(ns.getProblems, ns.REFRESH_DELAY);
   });
 
 }(jQuery, Mustache));
-    </script>
-</body>
-</html>
