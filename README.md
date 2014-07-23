@@ -9,6 +9,7 @@ An HTTP wrapper over eclim.
 
 ## Build
 
+    $ mkdir -p lib/build
     $ ant build-executable-jars
 
 ## Run
