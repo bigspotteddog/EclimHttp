@@ -176,20 +176,20 @@ public class Main {
 
       String response = null;
 
-      response = processEclimCommand(new String[] {"-command", "project_info", "-p", project});
-      Map<String, Object> map = gson.fromJson(response, mapType);
-      String projectPath = (String) map.get("path");
+    //   response = processEclimCommand(new String[] {"-command", "project_info", "-p", project});
+    //   Map<String, Object> map = gson.fromJson(response, mapType);
+    //   String projectPath = (String) map.get("path");
 
       response = processEclimCommand(new String[] {"-command", "problems", "-p", project});
-      List<Map<String, Object>> problems = gson.fromJson(response, listType);
+
       t.sendResponseHeaders(200, response.length());
       OutputStream os = t.getResponseBody();
       os.write(response.getBytes());
       os.close();
 
-      if (!projectPath.equals(Main.this.projectPath)) {
-        watchProject(projectPath);
-      }
+    //   if (!projectPath.equals(Main.this.projectPath)) {
+    //     watchProject(projectPath);
+    //   }
     }
   }
 
