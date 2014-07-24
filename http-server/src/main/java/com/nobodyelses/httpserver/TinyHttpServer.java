@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.file.Paths;
+import java.nio.file.Path;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -57,12 +59,19 @@ public class TinyHttpServer {
                 relativePath = rootPath;
             }
 
-            File file = new File(relativePath);
-            if (file.exists() && file.isDirectory()) {
-                relativePath = relativePath + "/index.html";
-            }
+            System.out.println(relativePath);
 
             try {
+                Path pathReq = Paths.get(relativePath);
+
+                checkPath(pathReq);
+
+                File file = pathReq.toFile();
+
+                if (file.exists() && file.isDirectory()) {
+                    relativePath = relativePath + "/index.html";
+                }
+
                 response = getFileAsString(relativePath);
             } catch (FileNotFoundException e) {
                 status = 404;
@@ -76,6 +85,19 @@ public class TinyHttpServer {
             OutputStream os = t.getResponseBody();
             os.write(response.getBytes());
             os.close();
+        }
+    }
+
+    private static void checkPath(final Path pathReq) throws Exception {
+        Path root = Paths.get(".");
+        Path realRoot = root.toRealPath();
+        Path realPath = pathReq.toRealPath();
+
+        System.out.println(realRoot);
+        System.out.println(realPath);
+
+        if (!realPath.startsWith(realRoot)) {
+            throw new FileNotFoundException("Not found.");
         }
     }
 
