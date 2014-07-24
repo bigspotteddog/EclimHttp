@@ -50,14 +50,24 @@
       $.each(ns.data, function (i, row) {
 
         if (ns.messageFilter.length > 0) {
-          if (row.message.indexOf(ns.messageFilter) === -1) {
-            return;
+          var search = ns.messageFilter.toLowerCase();
+          var message = row.message;
+          if (message) {
+            message = message.toLowerCase();
+            if (message.indexOf(search) === -1) {
+              return;
+            }
           }
         }
 
         if (ns.pathFilter.length > 0) {
-          if (row.path.indexOf(ns.pathFilter) === -1) {
-            return;
+          var search = ns.pathFilter.toLowerCase();
+          var filename = row.filename;
+          if (filename) {
+            filename = filename.toLowerCase();
+            if (filename.indexOf(search) === -1) {
+              return;
+            }
           }
         }
 
