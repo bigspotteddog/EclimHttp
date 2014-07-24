@@ -45,7 +45,7 @@
 
   ns.render = function () {
     console.info("Rendering problems.");
-    if (ns.data) {
+    if (ns.data && ns.data.length) {
       var html = "";
       $.each(ns.data, function (i, row) {
 
@@ -75,7 +75,10 @@
         html += mustache.render(ns.TMPL, row);
       });
       $("#report-body").html(html);
+    } else {
+      $("#report-body").html('<span>No problems</span>');
     }
+
   };
 
   ns.getProblems = function (projectName) {
@@ -95,6 +98,7 @@
     $(selector).on("project-selector:change", function () {
       clearInterval(intervalId);
       if (selector.selectedProject.name !== "Select One") {
+        ns.getProblems(selector.selectedProject.name);
         intervalId = setInterval(function () {
           ns.getProblems(selector.selectedProject.name);
         }, ns.REFRESH_DELAY);
