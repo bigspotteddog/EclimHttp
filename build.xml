@@ -664,8 +664,16 @@
             <manifest>
                 <attribute name="Main-Class" value="com.nobodyelses.httpserver.Main" />
             </manifest>
-            <!-- <zipfileset dir="templates" prefix="templates"/> -->
         </jar>
+
+        <copy todir="build/staging/http-server">
+            <fileset dir="${basedir}" includes="*.html" />
+        </copy>
+
+        <mkdir dir="build/staging/http-server/js" />
+        <copy todir="build/staging/http-server/js">
+            <fileset dir="${basedir}/js" includes="**" />
+        </copy>
 
     </target>
 </project>
